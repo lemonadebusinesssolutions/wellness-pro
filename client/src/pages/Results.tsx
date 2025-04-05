@@ -1,8 +1,29 @@
-
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
+
+type Result = {
+  id: number;
+  userId: number;
+  assessmentType: string;
+  score: number;
+  answers: number[];
+  categories: string[];
+  completedAt: string;
+};
+
+type Recommendation = {
+  id: number;
+  assessmentType: string;
+  category: string;
+  title: string;
+  description: string;
+  tips: string[];
+  minScore: number;
+  maxScore: number;
+  priority: string;
+};
 
 export default function Results() {
   const { type, resultId } = useParams();
@@ -12,7 +33,7 @@ export default function Results() {
     data: result,
     isLoading,
     error,
-  } = useQuery({
+  } = useQuery<Result>({
     queryKey: [`/api/results/${resultId}`],
     queryFn: getQueryFn({ on401: "throw" }),
   });
@@ -20,7 +41,7 @@ export default function Results() {
   const {
     data: recommendations,
     isLoading: recLoading,
-  } = useQuery({
+  } = useQuery<Recommendation[]>({
     queryKey: [`/api/top-recommendations/${resultId}`],
     queryFn: getQueryFn({ on401: "throw" }),
   });
@@ -36,34 +57,38 @@ export default function Results() {
       <p className="text-sm text-muted-foreground">Result ID: {resultId}</p>
 
       <div className="mt-4 bg-slate-100 dark:bg-slate-800 p-4 rounded shadow">
-        <p className="text-lg font-semibold">Taken on: {date ? date.toLocaleString() : "N/A"}</p>
+        <p className="text-lg font-semibold">
+          Taken on: {date ? date.toLocaleString() : "N/A"}
+        </p>
         <p className="text-lg">Score: {result.score}</p>
 
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">Categories</h2>
           <ul className="list-disc list-inside">
-            {Array.isArray(result.categories) &&
-              result.categories.map((cat: string, index: number) => (
-                <li key={index}>{cat}</li>
-              ))}
+            {result.categories.map((cat, index) => (
+              <li key={index}>{cat}</li>
+            ))}
           </ul>
         </div>
       </div>
 
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-4">Top Recommendations</h2>
-        {Array.isArray(recommendations) && recommendations.length > 0 ? (
+        {recommendations && recommendations.length > 0 ? (
           <div className="space-y-4">
             {recommendations.map((rec) => (
-              <div key={rec.id} className="p-4 border rounded shadow-md bg-white dark:bg-slate-700">
+              <div
+                key={rec.id}
+                className="p-4 border rounded shadow-md bg-white dark:bg-slate-700"
+              >
                 <h3 className="text-lg font-bold">{rec.title}</h3>
                 <p className="text-sm italic text-slate-600 dark:text-slate-300">
-                  Category: {rec.category} (Score range: {rec.minScore}-{rec.maxScore})
+                  Category: {rec.category} (Score range: {rec.minScore}–{rec.maxScore})
                 </p>
                 <p className="mt-2">{rec.description}</p>
-                {Array.isArray(rec.tips) && rec.tips.length > 0 && (
+                {rec.tips.length > 0 && (
                   <ul className="mt-2 list-disc list-inside text-sm text-slate-700 dark:text-slate-200">
-                    {rec.tips.map((tip: string, index: number) => (
+                    {rec.tips.map((tip, index) => (
                       <li key={index}>{tip}</li>
                     ))}
                   </ul>
@@ -78,4 +103,3 @@ export default function Results() {
     </div>
   );
 }
-
