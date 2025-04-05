@@ -40,7 +40,7 @@ app.use(session({
     httpOnly: true,
     sameSite: "lax", // Important for cross-origin cookie handling
     secure: true,     // Required for HTTPS
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week.
   },
 }));
 
