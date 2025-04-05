@@ -325,7 +325,7 @@ export class DbStorage implements IStorage {
     }
   }
   
-  // Recommendation methods
+  // Recommendation methodsxxx
   async getRecommendationsByAssessmentType(assessmentType: string): Promise<Recommendation[]> {
     try {
       const result = await this.pool.query(
