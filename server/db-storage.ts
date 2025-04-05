@@ -1,4 +1,3 @@
-
 import { 
   User, InsertUser, 
   Assessment, InsertAssessment, 
@@ -17,7 +16,7 @@ const PostgresStore = connectPgSimple(session);
 export class DbStorage implements IStorage {
   private pool: pg.Pool;
   sessionStore: session.Store;
-  
+
   constructor() {
     this.pool = pool;
     this.sessionStore = new PostgresStore({
@@ -26,7 +25,7 @@ export class DbStorage implements IStorage {
       createTableIfMissing: true
     });
   }
-  
+
   async initialize(): Promise<void> {
     try {
       await migrate();
@@ -210,6 +209,15 @@ export class DbStorage implements IStorage {
 
   async createResult(result: InsertResult): Promise<Result> {
     try {
+      console.log('Creating result with:', {
+        userId: result.userId,
+        assessmentType: result.assessmentType,
+        score: result.score,
+        answers: result.answers,
+        categories: result.categories,
+        completedAt: result.completedAt
+      });
+
       const queryResult = await this.pool.query(
         `INSERT INTO results (user_id, assessment_type, score, answers, categories, completed_at)
          VALUES ($1, $2, $3, $4, $5, $6)
@@ -287,4 +295,3 @@ export class DbStorage implements IStorage {
     }
   }
 }
-
