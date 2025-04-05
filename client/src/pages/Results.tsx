@@ -30,25 +30,19 @@ export default function Results() {
   const { user } = useAuth();
 
   const {
-    data: result,
+    data: resultData,
     isLoading,
     error,
-  } = useQuery<Result>({
-    queryKey: [`/api/results/${resultId}`],
+  } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
+    queryKey: [`/api/result/${resultId}`],
     queryFn: getQueryFn({ on401: "throw" }),
   });
 
-  const {
-    data: recommendations,
-    isLoading: recLoading,
-  } = useQuery<Recommendation[]>({
-    queryKey: [`/api/top-recommendations/${resultId}`],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
+  if (isLoading) return <div className="p-6">Loading...</div>;
+  if (error || !resultData?.result) return <div className="p-6">Error loading result.</div>;
 
-  if (isLoading || recLoading) return <div className="p-6">Loading...</div>;
-  if (error || !result) return <div className="p-6">Error loading result.</div>;
-
+  const result = resultData.result;
+  const recommendations = resultData.recommendations;
   const date = result.completedAt ? new Date(result.completedAt) : null;
 
   return (
