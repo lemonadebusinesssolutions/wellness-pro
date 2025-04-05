@@ -1,87 +1,81 @@
-//start of code
-import { useQuery } from "@tanstack/react-query";
+
 import { useParams } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { Result, Recommendation } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Results() {
   const { type, resultId } = useParams();
+  const { user } = useAuth();
 
   const {
     data: result,
     isLoading,
     error,
-  } = useQuery<Result>({
+  } = useQuery({
     queryKey: [`/api/results/${resultId}`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!resultId,
   });
 
   const {
     data: recommendations,
     isLoading: recLoading,
-  } = useQuery<Recommendation[]>({
+  } = useQuery({
     queryKey: [`/api/top-recommendations/${resultId}`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!resultId,
   });
 
-  if (isLoading || recLoading) {
-    return <div className="p-6">Loading...</div>;
-  }
+  if (isLoading || recLoading) return <div className="p-6">Loading...</div>;
+  if (error || !result) return <div className="p-6">Error loading result.</div>;
 
-  if (error || !result) {
-    return <div className="p-6 text-red-600">Error loading result.</div>;
-  }
-
-  const formattedDate = new Date(result.completedAt).toLocaleDateString();
-
-  // Safely cast categories
-  const categories = Array.isArray(result.categories)
-    ? (result.categories as { category: string; score: number }[])
-    : [];
+  const date = result.completedAt ? new Date(result.completedAt) : null;
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Your {type} Results</h1>
-      <p className="text-gray-600 mb-2">Result ID: {resultId}</p>
-      <p className="text-gray-600 mb-2">Taken on: {formattedDate}</p>
-      <p className="text-lg font-medium mt-4">Score: {result.score}</p>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Your {type} Results</h1>
+      <p className="text-sm text-muted-foreground">Result ID: {resultId}</p>
 
-      {categories.length > 0 && (
+      <div className="mt-4 bg-slate-100 dark:bg-slate-800 p-4 rounded shadow">
+        <p className="text-lg font-semibold">Taken on: {date ? date.toLocaleString() : "N/A"}</p>
+        <p className="text-lg">Score: {result.score}</p>
+
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">Categories</h2>
-          <ul className="list-disc list-inside space-y-1">
-            {categories.map((cat, index) => (
-              <li key={index}>
-                <span className="font-medium">{cat.category}</span>: {cat.score}
-              </li>
-            ))}
+          <ul className="list-disc list-inside">
+            {Array.isArray(result.categories) &&
+              result.categories.map((cat: string, index: number) => (
+                <li key={index}>{cat}</li>
+              ))}
           </ul>
         </div>
-      )}
+      </div>
 
-      {recommendations && recommendations.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-semibold mb-4">Your Recommendations</h2>
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-4">Top Recommendations</h2>
+        {Array.isArray(recommendations) && recommendations.length > 0 ? (
           <div className="space-y-4">
             {recommendations.map((rec) => (
-              <div key={rec.id} className="bg-white dark:bg-slate-800 p-4 rounded shadow">
-                <h3 className="text-xl font-bold">{rec.title}</h3>
-                <p className="text-gray-700 dark:text-gray-300">{rec.description}</p>
-                {Array.isArray(rec.tips) && (
-                  <ul className="list-disc list-inside mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {rec.tips.map((tip, i) => (
-                      <li key={i}>{String(tip)}</li>
+              <div key={rec.id} className="p-4 border rounded shadow-md bg-white dark:bg-slate-700">
+                <h3 className="text-lg font-bold">{rec.title}</h3>
+                <p className="text-sm italic text-slate-600 dark:text-slate-300">
+                  Category: {rec.category} (Score range: {rec.minScore}-{rec.maxScore})
+                </p>
+                <p className="mt-2">{rec.description}</p>
+                {Array.isArray(rec.tips) && rec.tips.length > 0 && (
+                  <ul className="mt-2 list-disc list-inside text-sm text-slate-700 dark:text-slate-200">
+                    {rec.tips.map((tip: string, index: number) => (
+                      <li key={index}>{tip}</li>
                     ))}
                   </ul>
                 )}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">No recommendations found.</p>
+        )}
+      </div>
     </div>
   );
 }
-//end of code
+
