@@ -38,10 +38,10 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "none", // Important for cross-origin cookie handling
-    secure: true,     // Required for HTTPS
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week.
-  },
+    sameSite: "lax", // ← try this instead
+    secure: true,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  }
 }));
 
 // ---------------------------
