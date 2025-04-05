@@ -64,17 +64,21 @@ export default function Results() {
 
         <div className="mt-4">
           <h2 className="text-xl font-semibold mb-2">Categories</h2>
-          <ul className="list-disc list-inside">
-            {result.categories.map((cat, index) => (
-              <li key={index}>{cat}</li>
-            ))}
-          </ul>
+          {Array.isArray(result.categories) && result.categories.length > 0 ? (
+            <ul className="list-disc list-inside">
+              {result.categories.map((cat, index) => (
+                <li key={index}>{cat}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No categories listed.</p>
+          )}
         </div>
       </div>
 
       <div className="mt-6">
         <h2 className="text-xl font-semibold mb-4">Top Recommendations</h2>
-        {recommendations && recommendations.length > 0 ? (
+        {Array.isArray(recommendations) && recommendations.length > 0 ? (
           <div className="space-y-4">
             {recommendations.map((rec) => (
               <div
@@ -86,12 +90,14 @@ export default function Results() {
                   Category: {rec.category} (Score range: {rec.minScore}–{rec.maxScore})
                 </p>
                 <p className="mt-2">{rec.description}</p>
-                {rec.tips.length > 0 && (
+                {Array.isArray(rec.tips) && rec.tips.length > 0 ? (
                   <ul className="mt-2 list-disc list-inside text-sm text-slate-700 dark:text-slate-200">
                     {rec.tips.map((tip, index) => (
                       <li key={index}>{tip}</li>
                     ))}
                   </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No tips available.</p>
                 )}
               </div>
             ))}
