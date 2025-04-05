@@ -1,0 +1,423 @@
+import { 
+  User, InsertUser, 
+  Assessment, InsertAssessment, 
+  Question, InsertQuestion, 
+  Result, InsertResult, 
+  Recommendation, InsertRecommendation
+} from '@shared/schema';
+import { IStorage } from './storage';
+import pg from 'pg';
+import { migrate, seedInitialData, getOrCreateAnonymousUser, pool } from './db';
+
+export class DbStorage implements IStorage {
+  private pool: pg.Pool;
+  
+  constructor() {
+    this.pool = pool;
+  }
+  
+  async initialize(): Promise<void> {
+    try {
+      // Create tables if they don't exist
+      await migrate();
+      
+      // Seed initial data
+      await seedInitialData();
+      
+      console.log('Database initialized successfully');
+    } catch (error) {
+      console.error('Error initializing database:', error);
+      throw error;
+    }
+  }
+  
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM users WHERE id = $1',
+        [id]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      return {
+        id: result.rows[0].id,
+        username: result.rows[0].username,
+        email: result.rows[0].email,
+      };
+    } catch (error) {
+      console.error('Error getting user:', error);
+      throw error;
+    }
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM users WHERE username = $1',
+        [username]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      return {
+        id: result.rows[0].id,
+        username: result.rows[0].username,
+        email: result.rows[0].email,
+      };
+    } catch (error) {
+      console.error('Error getting user by username:', error);
+      throw error;
+    }
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    try {
+      const result = await this.pool.query(
+        'INSERT INTO users (username, email) VALUES ($1, $2) RETURNING *',
+        [user.username, user.email]
+      );
+      
+      return {
+        id: result.rows[0].id,
+        username: result.rows[0].username,
+        email: result.rows[0].email,
+      };
+    } catch (error) {
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+  
+  // Assessment methods
+  async getAssessments(): Promise<Assessment[]> {
+    try {
+      const result = await this.pool.query('SELECT * FROM assessments');
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        description: row.description,
+        duration: row.duration,
+        icon: row.icon,
+      }));
+    } catch (error) {
+      console.error('Error getting assessments:', error);
+      throw error;
+    }
+  }
+  
+  async getAssessmentByType(type: string): Promise<Assessment | undefined> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM assessments WHERE type = $1',
+        [type]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      return {
+        id: result.rows[0].id,
+        type: result.rows[0].type,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        duration: result.rows[0].duration,
+        icon: result.rows[0].icon,
+      };
+    } catch (error) {
+      console.error('Error getting assessment by type:', error);
+      throw error;
+    }
+  }
+  
+  async createAssessment(assessment: InsertAssessment): Promise<Assessment> {
+    try {
+      const result = await this.pool.query(
+        'INSERT INTO assessments (type, title, description, duration, icon) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [assessment.type, assessment.title, assessment.description, assessment.duration, assessment.icon]
+      );
+      
+      return {
+        id: result.rows[0].id,
+        type: result.rows[0].type,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        duration: result.rows[0].duration,
+        icon: result.rows[0].icon,
+      };
+    } catch (error) {
+      console.error('Error creating assessment:', error);
+      throw error;
+    }
+  }
+  
+  // Question methods
+  async getQuestionsByAssessmentType(assessmentType: string): Promise<Question[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM questions WHERE assessment_type = $1 ORDER BY "order"',
+        [assessmentType]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        assessmentType: row.assessment_type,
+        text: row.text,
+        options: row.options,
+        order: row.order,
+        category: row.category,
+      }));
+    } catch (error) {
+      console.error('Error getting questions by assessment type:', error);
+      throw error;
+    }
+  }
+  
+  async createQuestion(question: InsertQuestion): Promise<Question> {
+    try {
+      const result = await this.pool.query(
+        'INSERT INTO questions (assessment_type, text, options, "order", category) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [question.assessmentType, question.text, question.options, question.order, question.category]
+      );
+      
+      return {
+        id: result.rows[0].id,
+        assessmentType: result.rows[0].assessment_type,
+        text: result.rows[0].text,
+        options: result.rows[0].options,
+        order: result.rows[0].order,
+        category: result.rows[0].category,
+      };
+    } catch (error) {
+      console.error('Error creating question:', error);
+      throw error;
+    }
+  }
+  
+  // Result methods
+  async getResultById(id: number): Promise<Result | undefined> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM results WHERE id = $1',
+        [id]
+      );
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      return {
+        id: result.rows[0].id,
+        userId: result.rows[0].user_id,
+        assessmentType: result.rows[0].assessment_type,
+        answers: result.rows[0].answers,
+        score: result.rows[0].score,
+        categories: result.rows[0].categories,
+        completedAt: result.rows[0].completed_at,
+      };
+    } catch (error) {
+      console.error('Error getting result by id:', error);
+      throw error;
+    }
+  }
+  
+  async getResultsByUserId(userId: number): Promise<Result[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM results WHERE user_id = $1 ORDER BY completed_at DESC',
+        [userId]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        assessmentType: row.assessment_type,
+        answers: row.answers,
+        score: row.score,
+        categories: row.categories,
+        completedAt: row.completed_at,
+      }));
+    } catch (error) {
+      console.error('Error getting results by user id:', error);
+      throw error;
+    }
+  }
+  
+  async getResultsByAssessmentType(assessmentType: string): Promise<Result[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM results WHERE assessment_type = $1 ORDER BY completed_at DESC',
+        [assessmentType]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        userId: row.user_id,
+        assessmentType: row.assessment_type,
+        answers: row.answers,
+        score: row.score,
+        categories: row.categories,
+        completedAt: row.completed_at,
+      }));
+    } catch (error) {
+      console.error('Error getting results by assessment type:', error);
+      throw error;
+    }
+  }
+  
+  async createResult(result: InsertResult): Promise<Result> {
+    try {
+      // Handle userId (it can be undefined)
+      let userId = null;
+      if (result.userId !== undefined) {
+        // This will only call getOrCreateAnonymousUser if userId is not null
+        userId = result.userId ? await getOrCreateAnonymousUser(result.userId) : null;
+      }
+      
+      const dbResult = await this.pool.query(
+        `INSERT INTO results 
+        (user_id, assessment_type, answers, score, categories, completed_at) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *`,
+        [
+          userId, 
+          result.assessmentType, 
+          JSON.stringify(result.answers), 
+          result.score,
+          JSON.stringify(result.categories),
+          result.completedAt || new Date()
+        ]
+      );
+      
+      return {
+        id: dbResult.rows[0].id,
+        userId: dbResult.rows[0].user_id,
+        assessmentType: dbResult.rows[0].assessment_type,
+        answers: dbResult.rows[0].answers,
+        score: dbResult.rows[0].score,
+        categories: dbResult.rows[0].categories,
+        completedAt: dbResult.rows[0].completed_at,
+      };
+    } catch (error) {
+      console.error('Error creating result:', error);
+      throw error;
+    }
+  }
+  
+  // Recommendation methods
+  async getRecommendationsByAssessmentType(assessmentType: string): Promise<Recommendation[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM recommendations WHERE assessment_type = $1',
+        [assessmentType]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        assessmentType: row.assessment_type,
+        category: row.category,
+        minScore: row.min_score,
+        maxScore: row.max_score,
+        title: row.title,
+        description: row.description,
+        priority: row.priority,
+        tips: row.tips,
+      }));
+    } catch (error) {
+      console.error('Error getting recommendations by assessment type:', error);
+      throw error;
+    }
+  }
+  
+  async getRecommendationsByCategory(category: string): Promise<Recommendation[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM recommendations WHERE category = $1',
+        [category]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        assessmentType: row.assessment_type,
+        category: row.category,
+        minScore: row.min_score,
+        maxScore: row.max_score,
+        title: row.title,
+        description: row.description,
+        priority: row.priority,
+        tips: row.tips,
+      }));
+    } catch (error) {
+      console.error('Error getting recommendations by category:', error);
+      throw error;
+    }
+  }
+  
+  async getRecommendationsByCategoryAndScore(category: string, score: number): Promise<Recommendation[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM recommendations WHERE category = $1 AND min_score <= $2 AND max_score >= $2',
+        [category, score]
+      );
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        assessmentType: row.assessment_type,
+        category: row.category,
+        minScore: row.min_score,
+        maxScore: row.max_score,
+        title: row.title,
+        description: row.description,
+        priority: row.priority,
+        tips: row.tips,
+      }));
+    } catch (error) {
+      console.error('Error getting recommendations by category and score:', error);
+      throw error;
+    }
+  }
+  
+  async createRecommendation(recommendation: InsertRecommendation): Promise<Recommendation> {
+    try {
+      const result = await this.pool.query(
+        `INSERT INTO recommendations 
+        (assessment_type, category, min_score, max_score, title, description, priority, tips) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        RETURNING *`,
+        [
+          recommendation.assessmentType,
+          recommendation.category,
+          recommendation.minScore,
+          recommendation.maxScore,
+          recommendation.title,
+          recommendation.description,
+          recommendation.priority,
+          recommendation.tips ? JSON.stringify(recommendation.tips) : null
+        ]
+      );
+      
+      return {
+        id: result.rows[0].id,
+        assessmentType: result.rows[0].assessment_type,
+        category: result.rows[0].category,
+        minScore: result.rows[0].min_score,
+        maxScore: result.rows[0].max_score,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        priority: result.rows[0].priority,
+        tips: result.rows[0].tips,
+      };
+    } catch (error) {
+      console.error('Error creating recommendation:', error);
+      throw error;
+    }
+  }
+}
