@@ -1,20 +1,17 @@
+
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
-import session from "express-session";
-import pg from "pg";
-import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-const PostgresStore = connectPgSimple(session);
 
 // ---------------------------
 // CORS Middleware
 // ---------------------------
 app.use(cors({
-  origin: "https://wellnesspro1.onrender.com", // Match your frontend URL exactly
+  origin: "https://wellnesspro1.onrender.com",
   credentials: true,
 }));
 
@@ -23,26 +20,6 @@ app.use(cors({
 // ---------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
-// ---------------------------
-// Session Middleware
-// ---------------------------
-app.use(session({
-  store: new PostgresStore({
-    pool: pool,
-    tableName: "session",
-    createTableIfMissing: true,
-  }),
-  secret: process.env.SESSION_SECRET || "default-session-secret",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: "lax", // ← try this instead
-    secure: true,
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  }
-}));
 
 // ---------------------------
 // Logging Middleware
@@ -102,3 +79,4 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+
