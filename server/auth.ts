@@ -1,3 +1,4 @@
+//start of code
 import passport from "passport"
 import { Strategy as LocalStrategy } from "passport-local"
 import { Express, Request, Response, NextFunction } from "express"
@@ -26,12 +27,16 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "wellbeing-app-secret"
 const IS_PROD = process.env.NODE_ENV === "production"
 
 export async function setupAuth(app: Express, storage: IStorage) {
+  // Required for secure cookies behind proxy (like Render)
+  app.set("trust proxy", 1)
+
   app.use(
     session({
       secret: SESSION_SECRET,
       resave: false,
       saveUninitialized: false,
       store: storage.sessionStore,
+      proxy: true,
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
@@ -187,3 +192,4 @@ export async function setupAuth(app: Express, storage: IStorage) {
     res.json(userWithoutPassword)
   })
 }
+//end of code
