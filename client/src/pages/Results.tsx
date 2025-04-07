@@ -34,7 +34,7 @@ export default function Results() {
     isLoading,
     error,
   } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
-    queryKey: [`/api/result/${resultId}`],
+    queryKey: [`/result/${resultId}`],
     queryFn: getQueryFn(`/result/${resultId}`),
 
   });
