@@ -1,4 +1,3 @@
-//start of code
 import express, { Request, Response, NextFunction } from "express"
 import cors from "cors"
 import { registerRoutes } from "./routes"
@@ -27,7 +26,6 @@ app.use(
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 
-// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now()
   const path = req.path
@@ -53,22 +51,21 @@ app.use((req, res, next) => {
 })
 
 ;(async () => {
-  await registerRoutes(app);
+  await registerRoutes(app)
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-    console.error("Unhandled server error:", err);
-  });
+    const status = err.status || err.statusCode || 500
+    const message = err.message || "Internal Server Error"
+    res.status(status).json({ message })
+    console.error("Unhandled server error:", err)
+  })
 
-  const port = process.env.PORT || 5000;
-  const server = app.listen(port, () => log(`serving on port ${port}`));
+  const port = process.env.PORT || 5000
+  const server = app.listen(port, () => log(`serving on port ${port}`))
 
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite(app, server)
   } else {
-    serveStatic(app);
+    serveStatic(app)
   }
-})();
-
+})()

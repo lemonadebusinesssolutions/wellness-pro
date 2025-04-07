@@ -1,88 +1,76 @@
-//start of code
-import express, { Request, Response, NextFunction } from "express";
-import cors from "cors";
-import { registerRoutes } from "../routes";     // not ./routes
-import { setupVite, serveStatic, log } from "../vite"; // not ./vite
+import express, { Express, Request, Response, NextFunction } from "express"
+import session from "express-session"
+import MySQLStoreFactory from "express-mysql-session"
+import { setupAuth } from "../auth"
+import { pool } from "../db"
+import { IStorage } from "../storage"
 
+const MySQLStore = MySQLStoreFactory(session)
 
-const app = express();
+export async function registerRoutes(app: Express) {
+  const sessionStore = new MySQLStore({}, pool as any)
 
-// ---------------------------
-// CORS Middleware
-// ---------------------------
-const allowedOrigins = [
-  "https://wellnesspro1.onrender.com",
-  "http://localhost:5173",
-];
-
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
+  const storage: IStorage = {
+    getUser: async (id) => {
+      const [rows]: any = await pool.query("SELECT * FROM users WHERE id = ?", [id])
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
     },
-    credentials: true,
-  })
-);
+    getUserByEmail: async (email) => {
+      const [rows]: any = await pool.query("SELECT * FROM users WHERE email = ?", [email])
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
+    },
+    getUserByUsername: async (username) => {
+      const [rows]: any = await pool.query("SELECT * FROM users WHERE username = ?", [username])
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
+    },
+    createUser: async ({ username, email, password }) => {
+      const [result]: any = await pool.query(
+        "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
+        [username, email, password]
+      )
+      const [rows]: any = await pool.query("SELECT * FROM users WHERE id = ?", [result.insertId])
+      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
+    },
+    sessionStore,
 
-// ---------------------------
-// Body Parsers
-// ---------------------------
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
-// ---------------------------
-// Logging Middleware
-// ---------------------------
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJson: Record<string, any> | undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJson = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJson) logLine += ` :: ${JSON.stringify(capturedJson)}`;
-      if (logLine.length > 80) logLine = logLine.slice(0, 79) + "…";
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
-// ---------------------------
-// Main Async Setup
-// ---------------------------
-(async () => {
-  await registerRoutes(app);
-
-  // Error handler middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-    res.status(status).json({ message });
-    console.error("Unhandled server error:", err);
-  });
-
-  const port = process.env.PORT || 5000;
-  const server = app.listen(port, () => log(`serving on port ${port}`));
-
-  // Dev server or production static
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // Added to satisfy IStorage
+    getUserByGoogleId: async () => null,
+    updateUser: async (user) => user,
+    getAssessments: async () => [],
+    getAssessmentByType: async () => null,
+    getResultById: async () => null,
+    createResult: async () => null,
+    getRecommendations: async () => [],
+    getRecommendationsByType: async () => [],
+    getRecommendationsByCategory: async () => [],
+    getRecommendationsByScoreRange: async () => [],
+    createFeedback: async () => null,
+    getAllUsers: async () => [],
   }
-})();
-//end of code
+
+  await setupAuth(app, storage)
+
+  // Route: GET /api/result/:id
+  app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const resultId = parseInt(req.params.id, 10)
+      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId])
+      if (!Array.isArray(results) || results.length === 0) {
+        return res.status(404).json({ error: "Result not found" })
+      }
+
+      const result = results[0]
+      const [recs]: any = await pool.query(
+        "SELECT * FROM recommendations WHERE assessmentType = ?",
+        [result.assessmentType]
+      )
+
+      res.json({
+        result,
+        recommendations: recs,
+      })
+    } catch (err) {
+      next(err)
+    }
+  })
+}
