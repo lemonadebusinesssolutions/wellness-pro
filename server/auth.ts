@@ -41,10 +41,11 @@ export async function setupAuth(app: Express, storage: IStorage) {
     })
   )
 
+  // Debugging session state
   app.use((req, _res, next) => {
-    console.log("Session at middleware:", req.session);
-    next();
-  });
+    console.log("🔍 Session debug middleware:", req.session)
+    next()
+  })
 
   app.use(passport.initialize())
   app.use(passport.session())
@@ -88,7 +89,6 @@ export async function setupAuth(app: Express, storage: IStorage) {
     try {
       const user = await storage.getUser(id)
       if (!user) return done(null, false)
-
       done(null, {
         id: user.id,
         username: user.username ?? "",
@@ -104,6 +104,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
     }
   })
 
+  // Register route
   app.post("/api/auth/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const schema = loginUserSchema.extend({
@@ -141,6 +142,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
 
       req.login(cleanedUser, (err: Error | null) => {
         if (err) return next(err)
+        console.log("✅ Registered and logged in. Session:", req.session)
         const { password, ...userWithoutPassword } = cleanedUser
         res.status(201).json(userWithoutPassword)
       })
@@ -149,6 +151,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
     }
   })
 
+  // Login route
   app.post("/api/auth/login", (req: Request, res: Response, next: NextFunction) => {
     passport.authenticate(
       "local",
@@ -158,6 +161,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
 
         req.login(user, (err: Error | null) => {
           if (err) return next(err)
+          console.log("✅ Logged in. Session:", req.session)
           const { password, ...userWithoutPassword } = user
           res.json(userWithoutPassword)
         })
@@ -165,6 +169,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
     )(req, res, next)
   })
 
+  // Logout route
   app.post("/api/auth/logout", (req: Request, res: Response, next: NextFunction) => {
     req.logout((err) => {
       if (err) return next(err)
@@ -172,6 +177,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
     })
   })
 
+  // Auth check route
   app.get("/api/auth/me", (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" })
