@@ -1,6 +1,8 @@
-//start of code
 import { QueryClient } from '@tanstack/react-query'
 
+/**
+ * Main Query Client for React Query with default options.
+ */
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -16,7 +18,7 @@ const queryClient = new QueryClient({
         }
 
         const endpoint = queryKey[0]
-        const response = await fetch(`/api/${endpoint}`, {
+        const response = await fetch(`/api${endpoint.startsWith('/') ? '' : '/'}${endpoint}`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -35,16 +37,21 @@ const queryClient = new QueryClient({
   },
 })
 
-export default queryClient
-
-export async function apiRequest<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, {
-    ...init,
+/**
+ * Helper function to make API requests with credentials.
+ */
+export async function apiRequest<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  url: string,
+  body?: any
+): Promise<T> {
+  const response = await fetch(url, {
+    method,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      ...(init?.headers || {}),
     },
+    body: body ? JSON.stringify(body) : undefined,
   })
 
   if (!response.ok) {
@@ -54,4 +61,5 @@ export async function apiRequest<T>(input: RequestInfo, init?: RequestInit): Pro
 
   return response.json()
 }
-//end of code
+
+export default queryClient
