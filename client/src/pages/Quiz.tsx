@@ -44,7 +44,6 @@ export default function Quiz() {
         method: "POST",
         body: data,
       })
-      
     },
     onSuccess: (data) => {
       navigate(`/results/${type}/${data.result.id}`)
