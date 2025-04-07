@@ -1,6 +1,6 @@
 import passport from "passport"
 import { Strategy as LocalStrategy } from "passport-local"
-import { Express } from "express"
+import { Express, Request, Response, NextFunction } from "express"
 import session from "express-session"
 import bcrypt from "bcrypt"
 import { IStorage } from "./storage"
@@ -33,10 +33,10 @@ export async function setupAuth(app: Express, storage: IStorage) {
       saveUninitialized: false,
       store: storage.sessionStore,
       cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         httpOnly: true,
-        sameSite: IS_PROD ? "none" : "lax",
         secure: IS_PROD,
+        sameSite: IS_PROD ? "none" : "lax",
       },
     })
   )
@@ -53,14 +53,10 @@ export async function setupAuth(app: Express, storage: IStorage) {
       async (email, password, done) => {
         try {
           const user = await storage.getUserByEmail(email)
-          if (!user) {
-            return done(null, false, { message: "Invalid email or password." })
-          }
+          if (!user) return done(null, false, { message: "Invalid email or password." })
 
           const isValid = await bcrypt.compare(password, user.password || "")
-          if (!isValid) {
-            return done(null, false, { message: "Invalid email or password." })
-          }
+          if (!isValid) return done(null, false, { message: "Invalid email or password." })
 
           return done(null, {
             id: user.id,
@@ -79,13 +75,16 @@ export async function setupAuth(app: Express, storage: IStorage) {
     )
   )
 
-  passport.serializeUser((user, done) => done(null, user.id))
+  passport.serializeUser((user, done) => {
+    done(null, user.id)
+  })
 
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id)
       if (!user) return done(null, false)
-      return done(null, {
+
+      done(null, {
         id: user.id,
         username: user.username ?? "",
         email: user.email,
@@ -100,7 +99,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
     }
   })
 
-  app.post("/api/auth/register", async (req, res, next) => {
+  app.post("/api/auth/register", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const schema = loginUserSchema.extend({
         username: z.string().min(3, "Username must be at least 3 characters"),
@@ -113,11 +112,13 @@ export async function setupAuth(app: Express, storage: IStorage) {
 
       const { username, email, password } = parsed.data
 
-      const existsEmail = await storage.getUserByEmail(email)
-      if (existsEmail) return res.status(400).json({ error: "Email already in use" })
+      if (await storage.getUserByEmail(email)) {
+        return res.status(400).json({ error: "Email already in use" })
+      }
 
-      const existsUsername = await storage.getUserByUsername(username)
-      if (existsUsername) return res.status(400).json({ error: "Username already taken" })
+      if (await storage.getUserByUsername(username)) {
+        return res.status(400).json({ error: "Username already taken" })
+      }
 
       const hashedPassword = await bcrypt.hash(password, 10)
       const user = await storage.createUser({ username, email, password: hashedPassword })
@@ -133,7 +134,7 @@ export async function setupAuth(app: Express, storage: IStorage) {
         createdAt: user.createdAt ?? undefined,
       }
 
-      req.login(cleanedUser, (err) => {
+      req.login(cleanedUser, (err: Error | null) => {
         if (err) return next(err)
         const { password, ...userWithoutPassword } = cleanedUser
         res.status(201).json(userWithoutPassword)
@@ -143,27 +144,30 @@ export async function setupAuth(app: Express, storage: IStorage) {
     }
   })
 
-  app.post("/api/auth/login", (req, res, next) => {
-    passport.authenticate("local", (err, user, info) => {
-      if (err) return next(err)
-      if (!user) return res.status(401).json({ error: info?.message || "Invalid credentials" })
-
-      req.login(user, (err) => {
+  app.post("/api/auth/login", (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate(
+      "local",
+      (err: Error | null, user: Express.User | false, info: { message?: string }) => {
         if (err) return next(err)
-        const { password, ...userWithoutPassword } = user
-        res.json(userWithoutPassword)
-      })
-    })(req, res, next)
+        if (!user) return res.status(401).json({ error: info?.message || "Invalid credentials" })
+
+        req.login(user, (err: Error | null) => {
+          if (err) return next(err)
+          const { password, ...userWithoutPassword } = user
+          res.json(userWithoutPassword)
+        })
+      }
+    )(req, res, next)
   })
 
-  app.post("/api/auth/logout", (req, res, next) => {
+  app.post("/api/auth/logout", (req: Request, res: Response, next: NextFunction) => {
     req.logout((err) => {
       if (err) return next(err)
       res.status(200).json({ message: "Logged out successfully" })
     })
   })
 
-  app.get("/api/auth/me", (req, res) => {
+  app.get("/api/auth/me", (req: Request, res: Response) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: "Not authenticated" })
     }
