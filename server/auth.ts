@@ -41,6 +41,11 @@ export async function setupAuth(app: Express, storage: IStorage) {
     })
   )
 
+  app.use((req, _res, next) => {
+    console.log("Session at middleware:", req.session);
+    next();
+  });
+
   app.use(passport.initialize())
   app.use(passport.session())
 
