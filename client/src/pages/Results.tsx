@@ -35,7 +35,7 @@ export default function Results() {
     error,
   } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
     queryKey: [`/result/${resultId}`],
-    queryFn: getQueryFn(`/result/${resultId}`),
+    queryFn: getQueryFn(`result/${resultId}`),
 
   });
 
