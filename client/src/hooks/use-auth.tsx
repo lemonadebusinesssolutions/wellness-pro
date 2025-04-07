@@ -1,3 +1,4 @@
+//start of code
 import { createContext, ReactNode, useContext } from "react"
 import {
   useQuery,
@@ -38,12 +39,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
   } = useQuery<AuthUser | null, Error>({
     queryKey: ["/auth/me"],
+    queryFn: async () => {
+      return await apiRequest<AuthUser>("/api/auth/me")
+    },
   })
 
   // Login with email and password
   const loginMutation = useMutation<AuthUser, Error, LoginUser>({
-    mutationFn: async (credentials: LoginUser) => {
-      return await apiRequest<AuthUser>("POST", "/api/auth/login", credentials)
+    mutationFn: async (credentials) => {
+      return await apiRequest<AuthUser>("/api/auth/login", {
+        method: "POST",
+        body: credentials,
+      })
     },
     onSuccess: (userData) => {
       queryClient.setQueryData(["/auth/me"], userData)
@@ -52,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome back, ${userData.username}!`,
       })
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Login failed",
         description: error.message,
@@ -63,8 +70,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Register new user
   const registerMutation = useMutation<AuthUser, Error, RegisterData>({
-    mutationFn: async (userData: RegisterData) => {
-      return await apiRequest<AuthUser>("POST", "/api/auth/register", userData)
+    mutationFn: async (userData) => {
+      return await apiRequest<AuthUser>("/api/auth/register", {
+        method: "POST",
+        body: userData,
+      })
     },
     onSuccess: (userData) => {
       queryClient.setQueryData(["/auth/me"], userData)
@@ -73,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: `Welcome, ${userData.username}!`,
       })
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Registration failed",
         description: error.message,
@@ -85,7 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout user
   const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      await apiRequest<void>("POST", "/api/auth/logout")
+      await apiRequest("/api/auth/logout", {
+        method: "POST",
+      })
     },
     onSuccess: () => {
       queryClient.setQueryData(["/auth/me"], null)
@@ -94,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have been successfully logged out.",
       })
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Logout failed",
         description: error.message,
@@ -126,3 +138,4 @@ export function useAuth() {
   }
   return context
 }
+//end of code

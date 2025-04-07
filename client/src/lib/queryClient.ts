@@ -1,7 +1,8 @@
+//start of code
 import { QueryClient } from '@tanstack/react-query'
 
 /**
- * Main Query Client for React Query with default options.
+ * A shared QueryClient instance configured with sensible defaults for the WellnessPro app.
  */
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +19,7 @@ const queryClient = new QueryClient({
         }
 
         const endpoint = queryKey[0]
-        const response = await fetch(`/api${endpoint.startsWith('/') ? '' : '/'}${endpoint}`, {
+        const response = await fetch(`/api/${endpoint}`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -37,21 +38,26 @@ const queryClient = new QueryClient({
   },
 })
 
+export default queryClient
+
 /**
- * Helper function to make API requests with credentials.
+ * Perform an API request with credentials and JSON handling.
+ * @param input Request URL
+ * @param init Optional request init with object body support
+ * @returns Parsed JSON response
  */
 export async function apiRequest<T>(
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-  url: string,
-  body?: any
+  input: RequestInfo,
+  init?: Omit<RequestInit, 'body'> & { body?: Record<string, any> }
 ): Promise<T> {
-  const response = await fetch(url, {
-    method,
+  const response = await fetch(input, {
+    ...init,
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
+      ...(init?.headers || {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: init?.body ? JSON.stringify(init.body) : undefined,
   })
 
   if (!response.ok) {
@@ -62,4 +68,12 @@ export async function apiRequest<T>(
   return response.json()
 }
 
-export default queryClient
+/**
+ * Generate a query function for React Query using a static API endpoint.
+ * @param endpoint The API route to query, e.g., 'auth/me'
+ * @returns Query function compatible with useQuery
+ */
+export function getQueryFn<T>(endpoint: string) {
+  return async () => await apiRequest<T>(`/api/${endpoint}`)
+}
+//end of code
