@@ -34,9 +34,8 @@ export default function Results() {
     isLoading,
     error,
   } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
-    queryKey: [`/result/${resultId}`],
-    queryFn: getQueryFn(`result/${resultId}`),
-
+    queryKey: [`/api/result/${resultId}`],
+    queryFn: getQueryFn(`/api/result/${resultId}`),
   });
 
   if (isLoading) return <div className="p-6">Loading...</div>;
