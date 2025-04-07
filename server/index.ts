@@ -1,4 +1,4 @@
-
+//start of code
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { pool } from "./db";
@@ -10,8 +10,19 @@ const app = express();
 // ---------------------------
 // CORS Middleware
 // ---------------------------
+const allowedOrigins = [
+  "https://wellnesspro1.onrender.com",
+  "http://localhost:5173", // local frontend dev
+];
+
 app.use(cors({
-  origin: "https://wellnesspro1.onrender.com",
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 }));
 
@@ -66,7 +77,7 @@ app.use((req, res, next) => {
     console.error("Unhandled server error:", err);
   });
 
-  // Dev server with Vite
+  // Serve frontend
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
@@ -74,9 +85,9 @@ app.use((req, res, next) => {
   }
 
   // Start server
-  const port = 5000;
+  const port = process.env.PORT || 5000;
   server.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
     log(`serving on port ${port}`);
   });
 })();
-
+//end of code
