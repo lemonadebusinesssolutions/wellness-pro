@@ -1,7 +1,9 @@
+//start of code
 import { useQuery } from "@tanstack/react-query";
 import { Assessment } from "@shared/schema";
 import AssessmentCard from "@/components/assessment/AssessmentCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function Assessments() {
   const {
@@ -9,7 +11,8 @@ export default function Assessments() {
     isLoading,
     error,
   } = useQuery<Assessment[], Error>({
-    queryKey: ["/api/assessments"],
+    queryKey: ["assessments"],
+    queryFn: getQueryFn<Assessment[]>("assessments"),
   });
 
   if (isLoading) {
@@ -111,3 +114,4 @@ export default function Assessments() {
     </main>
   );
 }
+//end of code
