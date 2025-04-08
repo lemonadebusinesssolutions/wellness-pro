@@ -55,39 +55,50 @@ export async function registerRoutes(app: Express) {
   // ------------------------
   app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const resultId = parseInt(req.params.id, 10)
-      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId])
-
+      const resultId = parseInt(req.params.id, 10);
+      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId]);
+  
       if (!Array.isArray(results) || results.length === 0) {
-        return res.status(404).json({ error: "Result not found" })
+        return res.status(404).json({ error: "Result not found" });
       }
-
-      const result = results[0]
-
-      // Parse categories from JSON string
-      if (typeof result.categories === "string") {
+  
+      const dbResult = results[0];
+  
+      // Convert field names to camelCase
+      const result = {
+        id: dbResult.id,
+        userId: dbResult.user_id,
+        assessmentType: dbResult.assessment_type,
+        score: dbResult.score,
+        answers: dbResult.answers,
+        completedAt: dbResult.completed_at,
+        categories: [],
+      };
+  
+      // Parse category JSON object to array of names
+      if (typeof dbResult.categories === "string") {
         try {
-          const parsed = JSON.parse(result.categories)
-          result.categories = Object.keys(parsed)
+          const parsed = JSON.parse(dbResult.categories);
+          result.categories = Object.keys(parsed); // You can also include scores if needed
         } catch {
-          result.categories = []
+          result.categories = [];
         }
       }
-
-      // Fix column name from assessmentType to assessment_type
+  
       const [recs]: any = await pool.query(
         "SELECT * FROM recommendations WHERE assessment_type = ?",
         [result.assessmentType]
-      )
-
+      );
+  
       res.json({
         result,
         recommendations: recs,
-      })
+      });
     } catch (err) {
-      next(err)
+      next(err);
     }
-  })
+  });
+  
 
   return app
 }
