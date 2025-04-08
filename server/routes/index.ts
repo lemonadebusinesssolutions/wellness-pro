@@ -1,103 +1,55 @@
+//start of code
 import express, { Express, Request, Response, NextFunction } from "express"
-import * as session from "express-session"
-import MySQLStoreFactory from "express-mysql-session"
+import session from "express-session"
 import { setupAuth } from "../auth"
-import { pool } from "../db"
 import { IStorage } from "../storage"
 
-const MySQLStore = MySQLStoreFactory(session)
+export async function registerRoutes(app: Express, storage: IStorage) {
+  // Attach session middleware
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "mysecret",
+      resave: false,
+      saveUninitialized: false,
+      store: storage.sessionStore,
+      cookie: {
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: true,
+        sameSite: "lax",
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+      },
+    })
+  )
 
-export async function registerRoutes(app: Express) {
-  const sessionStore = new MySQLStore({}, pool as any)
-
-  const storage: IStorage = {
-    getUser: async (id) => {
-      const [rows]: any = await pool.query("SELECT * FROM users WHERE id = ?", [id])
-      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
-    },
-    getUserByEmail: async (email) => {
-      const [rows]: any = await pool.query("SELECT * FROM users WHERE email = ?", [email])
-      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
-    },
-    getUserByUsername: async (username) => {
-      const [rows]: any = await pool.query("SELECT * FROM users WHERE username = ?", [username])
-      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
-    },
-    createUser: async ({ username, email, password }) => {
-      const [result]: any = await pool.query(
-        "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-        [username, email, password]
-      )
-      const [rows]: any = await pool.query("SELECT * FROM users WHERE id = ?", [result.insertId])
-      return Array.isArray(rows) && rows.length > 0 ? rows[0] : undefined
-    },
-    sessionStore,
-
-    // Filler methods for type compatibility
-    getUserByGoogleId: async () => null,
-    updateUser: async (user) => user,
-    getAssessments: async () => [],
-    getAssessmentByType: async () => null,
-    getResultById: async () => null,
-    createResult: async () => null,
-    getRecommendations: async () => [],
-    getRecommendationsByType: async () => [],
-    getRecommendationsByCategory: async () => [],
-    getRecommendationsByScoreRange: async () => [],
-    createFeedback: async () => null,
-    getAllUsers: async () => [],
-  }
-
+  // Attach auth routes
   await setupAuth(app, storage)
 
-  // GET /api/result/:id
+  // Route: GET /api/result/:id
   app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const resultId = parseInt(req.params.id, 10)
-      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId])
+      const result = await storage.getResultById(resultId)
 
-      if (!Array.isArray(results) || results.length === 0) {
+      if (!result) {
         return res.status(404).json({ error: "Result not found" })
       }
 
-      const dbResult = results[0]
-
-      const result: {
-        id: number
-        userId: number
-        assessmentType: string
-        score: number
-        answers: number[]
-        completedAt: string
-        categories: string[]
-      } = {
-        id: dbResult.id,
-        userId: dbResult.user_id,
-        assessmentType: dbResult.assessment_type,
-        score: dbResult.score,
-        answers: dbResult.answers,
-        completedAt: dbResult.completed_at,
-        categories: [],
-      }
-
-      if (typeof dbResult.categories === "string") {
+      // Parse categories into list if it's an object
+      if (typeof result.categories === "string") {
         try {
-          const parsed = JSON.parse(dbResult.categories)
+          const parsed = JSON.parse(result.categories)
           result.categories = Object.keys(parsed)
         } catch {
           result.categories = []
         }
+      } else if (typeof result.categories === "object" && result.categories !== null) {
+        result.categories = Object.keys(result.categories)
+      } else {
+        result.categories = []
       }
 
-      const [recs]: any = await pool.query(
-        "SELECT * FROM recommendations WHERE assessment_type = ?",
-        [result.assessmentType]
-      )
-
-      res.json({
-        result,
-        recommendations: recs,
-      })
+      const recommendations = await storage.getRecommendationsByAssessmentType(result.assessmentType)
+      res.json({ result, recommendations })
     } catch (err) {
       next(err)
     }
@@ -105,3 +57,4 @@ export async function registerRoutes(app: Express) {
 
   return app
 }
+//end of code
