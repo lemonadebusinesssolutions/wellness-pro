@@ -1,6 +1,6 @@
+//start of code
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 
 type Result = {
@@ -29,17 +29,48 @@ export default function Results() {
   const { type, resultId } = useParams();
   const { user } = useAuth();
 
+  console.log("Loaded Results page with resultId:", resultId);
+
   const {
     data: resultData,
     isLoading,
     error,
   } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
     queryKey: [`/api/result/${resultId}`],
-    queryFn: getQueryFn(`/api/result/${resultId}`),
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/result/${resultId}`, {
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          console.error("Fetch failed:", response.status, text);
+          throw new Error(`Error ${response.status}: ${text}`);
+        }
+
+        const data = await response.json();
+        console.log("Received result data:", data);
+        return data;
+      } catch (err) {
+        console.error("Error fetching result:", err);
+        throw err;
+      }
+    },
   });
 
   if (isLoading) return <div className="p-6">Loading...</div>;
-  if (error || !resultData?.result) return <div className="p-6">Error loading result.</div>;
+
+  if (error || !resultData?.result) {
+    return (
+      <div className="p-6 text-red-600">
+        Error loading result. {error instanceof Error ? error.message : ""}
+      </div>
+    );
+  }
 
   const result = resultData.result;
   const recommendations = resultData.recommendations;
@@ -103,3 +134,4 @@ export default function Results() {
     </div>
   );
 }
+//end of code
