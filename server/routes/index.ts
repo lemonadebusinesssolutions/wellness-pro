@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express) {
 
       const result = results[0]
       const [recs]: any = await pool.query(
-        "SELECT * FROM recommendations WHERE assessmentType = ?",
+        "SELECT * FROM recommendations WHERE assessment_type = ?",
         [result.assessmentType]
       )
 
