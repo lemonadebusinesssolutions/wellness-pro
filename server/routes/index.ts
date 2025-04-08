@@ -1,5 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from "express"
-import session from "express-session"
+import * as session from "express-session"
 import MySQLStoreFactory from "express-mysql-session"
 import { setupAuth } from "../auth"
 import { pool } from "../db"
@@ -33,7 +33,7 @@ export async function registerRoutes(app: Express) {
     },
     sessionStore,
 
-    // Filler methods to satisfy IStorage
+    // Filler methods for type compatibility
     getUserByGoogleId: async () => null,
     updateUser: async (user) => user,
     getAssessments: async () => [],
@@ -50,22 +50,27 @@ export async function registerRoutes(app: Express) {
 
   await setupAuth(app, storage)
 
-  // ------------------------
-  // Route: GET /api/result/:id
-  // ------------------------
+  // GET /api/result/:id
   app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const resultId = parseInt(req.params.id, 10);
-      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId]);
-  
+      const resultId = parseInt(req.params.id, 10)
+      const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId])
+
       if (!Array.isArray(results) || results.length === 0) {
-        return res.status(404).json({ error: "Result not found" });
+        return res.status(404).json({ error: "Result not found" })
       }
-  
-      const dbResult = results[0];
-  
-      // Convert field names to camelCase
-      const result = {
+
+      const dbResult = results[0]
+
+      const result: {
+        id: number
+        userId: number
+        assessmentType: string
+        score: number
+        answers: number[]
+        completedAt: string
+        categories: string[]
+      } = {
         id: dbResult.id,
         userId: dbResult.user_id,
         assessmentType: dbResult.assessment_type,
@@ -73,32 +78,30 @@ export async function registerRoutes(app: Express) {
         answers: dbResult.answers,
         completedAt: dbResult.completed_at,
         categories: [],
-      };
-  
-      // Parse category JSON object to array of names
+      }
+
       if (typeof dbResult.categories === "string") {
         try {
-          const parsed = JSON.parse(dbResult.categories);
-          result.categories = Object.keys(parsed); // You can also include scores if needed
+          const parsed = JSON.parse(dbResult.categories)
+          result.categories = Object.keys(parsed)
         } catch {
-          result.categories = [];
+          result.categories = []
         }
       }
-  
+
       const [recs]: any = await pool.query(
         "SELECT * FROM recommendations WHERE assessment_type = ?",
         [result.assessmentType]
-      );
-  
+      )
+
       res.json({
         result,
         recommendations: recs,
-      });
+      })
     } catch (err) {
-      next(err);
+      next(err)
     }
-  });
-  
+  })
 
   return app
 }
