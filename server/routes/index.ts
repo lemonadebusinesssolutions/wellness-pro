@@ -33,7 +33,7 @@ export async function registerRoutes(app: Express) {
     },
     sessionStore,
 
-    // Added to satisfy IStorage
+    // Filler methods to satisfy IStorage
     getUserByGoogleId: async () => null,
     updateUser: async (user) => user,
     getAssessments: async () => [],
@@ -50,16 +50,31 @@ export async function registerRoutes(app: Express) {
 
   await setupAuth(app, storage)
 
+  // ------------------------
   // Route: GET /api/result/:id
+  // ------------------------
   app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const resultId = parseInt(req.params.id, 10)
       const [results]: any = await pool.query("SELECT * FROM results WHERE id = ?", [resultId])
+
       if (!Array.isArray(results) || results.length === 0) {
         return res.status(404).json({ error: "Result not found" })
       }
 
       const result = results[0]
+
+      // Parse categories from JSON string
+      if (typeof result.categories === "string") {
+        try {
+          const parsed = JSON.parse(result.categories)
+          result.categories = Object.keys(parsed)
+        } catch {
+          result.categories = []
+        }
+      }
+
+      // Fix column name from assessmentType to assessment_type
       const [recs]: any = await pool.query(
         "SELECT * FROM recommendations WHERE assessment_type = ?",
         [result.assessmentType]
@@ -73,4 +88,6 @@ export async function registerRoutes(app: Express) {
       next(err)
     }
   })
+
+  return app
 }
