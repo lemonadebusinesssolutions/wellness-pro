@@ -19,7 +19,13 @@ const queryClient = new QueryClient({
         }
 
         const endpoint = queryKey[0]
-        const response = await fetch(`/api/${endpoint}`, {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+        const cleanBase = baseUrl.replace(/\/$/, '') // remove trailing slash
+        const cleanEndpoint = endpoint.replace(/^\/+/, '') // remove leading slashes from endpoint
+
+        const url = `${cleanBase}/api/${cleanEndpoint}`
+
+        const response = await fetch(url, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -50,7 +56,12 @@ export async function apiRequest<T>(
   input: RequestInfo,
   init?: Omit<RequestInit, 'body'> & { body?: Record<string, any> }
 ): Promise<T> {
-  const response = await fetch(input, {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  const cleanBase = baseUrl.replace(/\/$/, '')
+  const path = typeof input === 'string' ? input.replace(/^\/+/, '') : input
+  const fullUrl = typeof input === 'string' ? `${cleanBase}/${path}` : input
+
+  const response = await fetch(fullUrl, {
     ...init,
     credentials: 'include',
     headers: {
@@ -74,6 +85,9 @@ export async function apiRequest<T>(
  * @returns Query function compatible with useQuery
  */
 export function getQueryFn<T>(endpoint: string) {
-  return async () => await apiRequest<T>(`/api/${endpoint}`)
+  return async () => {
+    const cleanEndpoint = endpoint.replace(/^\/+/, '')
+    return await apiRequest<T>(`api/${cleanEndpoint}`)
+  }
 }
 //end of code
