@@ -6,6 +6,7 @@ import { IStorage } from "../storage";
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
 
+  // 🔐 Session configuration
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "mysecret",
@@ -21,6 +22,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     })
   );
 
+  // 🔐 Auth setup
   await setupAuth(app, storage);
 
   // 📡 GET /api/assessments
@@ -62,6 +64,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
       res.json({ result, recommendations });
     } catch (err) {
       console.error("❌ Error: /api/result/:id", err);
+      next(err);
+    }
+  });
+
+  // 📘 GET /api/questions/:type
+  app.get("/api/questions/:type", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const type = req.params.type;
+      const questions = await storage.getQuestionsByAssessmentType(type);
+
+      if (!questions || questions.length === 0) {
+        return res.status(404).json({ error: "No questions found for this assessment type" });
+      }
+
+      res.json(questions);
+    } catch (err) {
+      console.error("❌ Error: /api/questions/:type", err);
       next(err);
     }
   });
