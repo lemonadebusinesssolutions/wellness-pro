@@ -18,7 +18,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 30,
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
       },
     })
   );
@@ -42,11 +42,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     try {
       const { type } = req.params;
       const assessment = await storage.getAssessmentByType(type);
-
       if (!assessment) {
         return res.status(404).json({ error: "Assessment not found" });
       }
-
       res.json(assessment);
     } catch (err) {
       console.error("❌ Error: /api/assessments/:type", err);
@@ -59,7 +57,6 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     try {
       const id = parseInt(req.params.id, 10);
       const result = await storage.getResultById(id);
-
       if (!result) {
         return res.status(404).json({ error: "Result not found" });
       }
@@ -91,14 +88,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     try {
       const type = req.params.type;
       const questions = await storage.getQuestionsByAssessmentType(type);
-
       if (!questions || questions.length === 0) {
         return res.status(404).json({ error: "No questions found for this assessment type" });
       }
-
       res.json(questions);
     } catch (err) {
       console.error("❌ Error: /api/questions/:type", err);
+      next(err);
+    }
+  });
+
+  // 🧾 POST /api/submit-quiz
+  app.post("/api/submit-quiz", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { assessmentType, answers, userId } = req.body;
+
+      const questions = await storage.getQuestionsByAssessmentType(assessmentType);
+      if (!questions || questions.length === 0) {
+        return res.status(400).json({ error: "Invalid assessment type or no questions" });
+      }
+
+      const { score, categories } = calculateScoreAndCategories(questions, answers);
+
+      const result = await storage.createResult({
+        userId,
+        assessmentType,
+        answers,
+        score,
+        categories,
+        completedAt: new Date(),
+      });
+
+      res.status(201).json({ result });
+    } catch (err) {
+      console.error("❌ Error: /api/submit-quiz", err);
       next(err);
     }
   });
