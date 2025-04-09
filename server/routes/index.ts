@@ -6,7 +6,7 @@ import { IStorage } from "../storage";
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
 
-  // 🔐 Session configuration
+  // 🔐 Session middleware
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "mysecret",
@@ -32,6 +32,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
       res.json(assessments);
     } catch (err) {
       console.error("❌ Error: /api/assessments", err);
+      next(err);
+    }
+  });
+
+  // 📡 GET /api/assessments/:type
+  app.get("/api/assessments/:type", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { type } = req.params;
+      const assessment = await storage.getAssessmentByType(type);
+
+      if (!assessment) {
+        return res.status(404).json({ error: "Assessment not found" });
+      }
+
+      res.json(assessment);
+    } catch (err) {
+      console.error("❌ Error: /api/assessments/:type", err);
       next(err);
     }
   });
@@ -68,7 +85,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
-  // 📘 GET /api/questions/:type
+  // ❓ GET /api/questions/:type
   app.get("/api/questions/:type", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const type = req.params.type;
