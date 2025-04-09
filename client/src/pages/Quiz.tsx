@@ -1,52 +1,62 @@
-
-import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Question, SubmitQuizPayload } from "@shared/schema";
-import { useState } from "react";
-import QuizQuestion from "@/components/quiz/QuizQuestion";
-import ProgressBar from "@/components/quiz/ProgressBar";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { getAnonymousUserId } from "@/lib/utils";
+import { useParams, useLocation } from "wouter"
+import { useQuery, useMutation } from "@tanstack/react-query"
+import { Question, SubmitQuizPayload } from "@shared/schema"
+import { useState } from "react"
+import QuizQuestion from "@/components/quiz/QuizQuestion"
+import ProgressBar from "@/components/quiz/ProgressBar"
+import { apiRequest } from "@/lib/queryClient"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { getAnonymousUserId } from "@/lib/utils"
 
 interface Assessment {
-  title: string;
-  description: string;
+  title: string
+  description: string
 }
 
 export default function Quiz() {
-  const { type } = useParams<{ type?: string }>();
-  const [, navigate] = useLocation();
-  const { toast } = useToast();
+  const { type } = useParams<{ type?: string }>()
+  const [, navigate] = useLocation()
+  const { toast } = useToast()
 
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<number[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [answers, setAnswers] = useState<number[]>([])
 
-  const { data: questions, isLoading: questionsLoading, error: questionsError } = useQuery<Question[]>({
-    queryKey: [`/api/questions/${type}`],
-  });
+  const {
+    data: questions,
+    isLoading: questionsLoading,
+    error: questionsError,
+  } = useQuery<Question[]>({
+    queryKey: [`questions/${type}`],
+    queryFn: () => apiRequest<Question[]>(`questions/${type}`),
+  })
 
-  const { data: assessment, isLoading: assessmentLoading } = useQuery<Assessment>({
-    queryKey: [`/api/assessments/${type}`],
-  });
+  const {
+    data: assessment,
+    isLoading: assessmentLoading,
+  } = useQuery<Assessment>({
+    queryKey: [`assessments/${type}`],
+    queryFn: () => apiRequest<Assessment>(`assessments/${type}`),
+  })
 
   const submitMutation = useMutation({
     mutationFn: async (data: SubmitQuizPayload) => {
-      const response = await apiRequest("POST", "/api/submit-quiz", data);
-      return response.json();
+      return await apiRequest<{ result: { id: number } }>("submit-quiz", {
+        method: "POST",
+        body: data,
+      })
     },
     onSuccess: (data) => {
-      navigate(`/results/${type}/${data.result.id}`);
+      navigate(`/results/${type}/${data.result.id}`)
     },
     onError: (error: any) => {
       toast({
         title: "Error submitting quiz",
         description: error.message || "Please try again",
         variant: "destructive",
-      });
+      })
     },
-  });
+  })
 
   if (questionsLoading || assessmentLoading) {
     return (
@@ -67,7 +77,7 @@ export default function Quiz() {
           </div>
         </div>
       </main>
-    );
+    )
   }
 
   if (questionsError || !questions || !assessment || !type) {
@@ -82,24 +92,24 @@ export default function Quiz() {
           </Button>
         </div>
       </main>
-    );
+    )
   }
 
-  const totalQuestions = questions.length;
-  const currentQuestion = questions[currentQuestionIndex];
-  const progress = Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100);
+  const totalQuestions = questions.length
+  const currentQuestion = questions[currentQuestionIndex]
+  const progress = Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100)
 
   const handleAnswer = (value: number) => {
-    const newAnswers = [...answers];
-    newAnswers[currentQuestionIndex] = value;
-    setAnswers(newAnswers);
-  };
+    const newAnswers = [...answers]
+    newAnswers[currentQuestionIndex] = value
+    setAnswers(newAnswers)
+  }
 
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
+      setCurrentQuestionIndex(currentQuestionIndex - 1)
     }
-  };
+  }
 
   const handleNext = () => {
     if (answers[currentQuestionIndex] === undefined) {
@@ -107,20 +117,20 @@ export default function Quiz() {
         title: "Please select an answer",
         description: "You need to select an option before continuing.",
         variant: "destructive",
-      });
-      return;
+      })
+      return
     }
 
     if (currentQuestionIndex < totalQuestions - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentQuestionIndex(currentQuestionIndex + 1)
     } else {
       submitMutation.mutate({
         assessmentType: type as SubmitQuizPayload["assessmentType"],
         answers: answers,
         userId: getAnonymousUserId(),
-      });
+      })
     }
-  };
+  }
 
   return (
     <main className="flex-grow">
@@ -164,6 +174,5 @@ export default function Quiz() {
         </div>
       </div>
     </main>
-  );
+  )
 }
-
