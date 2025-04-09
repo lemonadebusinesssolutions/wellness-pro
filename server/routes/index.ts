@@ -6,7 +6,7 @@ import { IStorage } from "../storage";
 export async function registerRoutes(app: Express, storage: IStorage) {
   console.log("✅ registerRoutes initialized");
 
-  // Session middleware
+  // ➕ Session middleware
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "mysecret",
@@ -22,22 +22,21 @@ export async function registerRoutes(app: Express, storage: IStorage) {
     })
   );
 
-  // Auth routes
+  // 🔐 Setup authentication routes
   await setupAuth(app, storage);
 
-  // ✅ GET /api/assessments
+  // 🧪 GET /api/assessments
   app.get("/api/assessments", async (_req: Request, res: Response, next: NextFunction) => {
-    console.log("📡 HIT /api/assessments");
     try {
       const assessments = await storage.getAssessments();
       res.json(assessments);
     } catch (err) {
-      console.error("❌ Error in /api/assessments:", err);
+      console.error("❌ Failed to load assessments:", err);
       next(err);
     }
   });
 
-  // ✅ GET /api/result/:id
+  // 📊 GET /api/result/:id
   app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const resultId = parseInt(req.params.id, 10);
@@ -47,12 +46,13 @@ export async function registerRoutes(app: Express, storage: IStorage) {
         return res.status(404).json({ error: "Result not found" });
       }
 
-      // Normalize categories for frontend
+      // ✅ Parse and normalize categories for frontend display
       if (typeof result.categories === "string") {
         try {
           const parsed = JSON.parse(result.categories);
           result.categories = Object.keys(parsed);
-        } catch {
+        } catch (err) {
+          console.warn("⚠️ Failed to parse result.categories JSON string");
           result.categories = [];
         }
       } else if (typeof result.categories === "object" && result.categories !== null) {
@@ -61,9 +61,12 @@ export async function registerRoutes(app: Express, storage: IStorage) {
         result.categories = [];
       }
 
+      // 🔍 Get recommendations by assessment type
       const recommendations = await storage.getRecommendationsByAssessmentType(result.assessmentType);
+
       res.json({ result, recommendations });
     } catch (err) {
+      console.error("❌ Error in /api/result/:id:", err);
       next(err);
     }
   });
