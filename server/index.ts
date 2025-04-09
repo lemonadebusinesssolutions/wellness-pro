@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { DbStorage } from "./db-storage"; // ✅ Import actual storage
+import { DbStorage } from "./db-storage";
 
 const app = express();
 
@@ -32,10 +32,14 @@ app.use((req, res, next) => {
   const path = req.path;
   let capturedJson: Record<string, any> | undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJson = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+  if (path.startsWith("/api")) {
+    res.setHeader("Cache-Control", "no-store");
+  }
+
+  const originalJson = res.json;
+  res.json = function (body, ...args) {
+    capturedJson = body;
+    return originalJson.apply(res, [body, ...args]);
   };
 
   res.on("finish", () => {
@@ -43,7 +47,7 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJson) logLine += ` :: ${JSON.stringify(capturedJson)}`;
-      if (logLine.length > 80) logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 100) logLine = logLine.slice(0, 99) + "…";
       log(logLine);
     }
   });
@@ -52,20 +56,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const storage = new DbStorage(); // ✅ Create instance
-  await storage.initialize();      // ✅ Init database + seed if needed
+  const storage = new DbStorage();
+  await storage.initialize();
 
-  await registerRoutes(app, storage); // ✅ Pass storage into routes
+  // 👇 Pass full storage to route loader
+  await registerRoutes(app, storage);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
+    const status = err.status || 500;
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
-    console.error("Unhandled server error:", err);
+    console.error("🔥 Unhandled server error:", err);
   });
 
   const port = process.env.PORT || 5000;
-  const server = app.listen(port, () => log(`serving on port ${port}`));
+  const server = app.listen(port, () => log(`🚀 Server running on port ${port}`));
 
   if (app.get("env") === "development") {
     await setupVite(app, server);
