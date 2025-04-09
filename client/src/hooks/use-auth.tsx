@@ -1,4 +1,3 @@
-//start of code
 import { createContext, ReactNode, useContext } from "react"
 import {
   useQuery,
@@ -38,22 +37,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     isLoading,
   } = useQuery<AuthUser | null, Error>({
-    queryKey: ["/auth/me"],
+    queryKey: ["auth/me"],
     queryFn: async () => {
-      return await apiRequest<AuthUser>("/api/auth/me")
+      return await apiRequest<AuthUser>("auth/me")
     },
   })
 
   // Login with email and password
   const loginMutation = useMutation<AuthUser, Error, LoginUser>({
     mutationFn: async (credentials) => {
-      return await apiRequest<AuthUser>("/api/auth/login", {
+      return await apiRequest<AuthUser>("auth/login", {
         method: "POST",
         body: credentials,
       })
     },
     onSuccess: (userData) => {
-      queryClient.setQueryData(["/auth/me"], userData)
+      queryClient.setQueryData(["auth/me"], userData)
       toast({
         title: "Login successful",
         description: `Welcome back, ${userData.username}!`,
@@ -71,13 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Register new user
   const registerMutation = useMutation<AuthUser, Error, RegisterData>({
     mutationFn: async (userData) => {
-      return await apiRequest<AuthUser>("/api/auth/register", {
+      return await apiRequest<AuthUser>("auth/register", {
         method: "POST",
         body: userData,
       })
     },
     onSuccess: (userData) => {
-      queryClient.setQueryData(["/auth/me"], userData)
+      queryClient.setQueryData(["auth/me"], userData)
       toast({
         title: "Registration successful",
         description: `Welcome, ${userData.username}!`,
@@ -95,12 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Logout user
   const logoutMutation = useMutation<void, Error, void>({
     mutationFn: async () => {
-      await apiRequest("/api/auth/logout", {
+      await apiRequest("auth/logout", {
         method: "POST",
       })
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/auth/me"], null)
+      queryClient.setQueryData(["auth/me"], null)
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -138,4 +137,3 @@ export function useAuth() {
   }
   return context
 }
-//end of code
