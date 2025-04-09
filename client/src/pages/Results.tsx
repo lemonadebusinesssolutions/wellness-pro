@@ -1,80 +1,56 @@
-//start of code
-import { useParams } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/use-auth";
+import { useParams } from "wouter"
+import { useQuery } from "@tanstack/react-query"
+import { useAuth } from "@/hooks/use-auth"
+import { apiRequest } from "@/lib/queryClient"
 
 type Result = {
-  id: number;
-  userId: number;
-  assessmentType: string;
-  score: number;
-  answers: number[];
-  categories: string[];
-  completedAt: string;
-};
+  id: number
+  userId: number
+  assessmentType: string
+  score: number
+  answers: number[]
+  categories: string[]
+  completedAt: string
+}
 
 type Recommendation = {
-  id: number;
-  assessmentType: string;
-  category: string;
-  title: string;
-  description: string;
-  tips: string[];
-  minScore: number;
-  maxScore: number;
-  priority: string;
-};
+  id: number
+  assessmentType: string
+  category: string
+  title: string
+  description: string
+  tips: string[]
+  minScore: number
+  maxScore: number
+  priority: string
+}
 
 export default function Results() {
-  const { type, resultId } = useParams();
-  const { user } = useAuth();
-
-  console.log("Loaded Results page with resultId:", resultId);
+  const { type, resultId } = useParams()
+  const { user } = useAuth()
 
   const {
     data: resultData,
     isLoading,
     error,
   } = useQuery<{ result: Result; recommendations: Recommendation[] }>({
-    queryKey: [`/api/result/${resultId}`],
-    queryFn: async () => {
-      try {
-        const response = await fetch(`/api/result/${resultId}`, {
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+    queryKey: [`result/${resultId}`],
+    queryFn: () => apiRequest(`result/${resultId}`),
+  })
 
-        if (!response.ok) {
-          const text = await response.text();
-          console.error("Fetch failed:", response.status, text);
-          throw new Error(`Error ${response.status}: ${text}`);
-        }
-
-        const data = await response.json();
-        console.log("Received result data:", data);
-        return data;
-      } catch (err) {
-        console.error("Error fetching result:", err);
-        throw err;
-      }
-    },
-  });
-
-  if (isLoading) return <div className="p-6">Loading...</div>;
+  if (isLoading) return <div className="p-6">Loading...</div>
 
   if (error || !resultData?.result) {
     return (
       <div className="p-6 text-red-600">
         Error loading result. {error instanceof Error ? error.message : ""}
       </div>
-    );
+    )
   }
 
-  const result = resultData.result;
-  const recommendations = resultData.recommendations;
-  const date = result.completedAt ? new Date(result.completedAt) : null;
+  const result = resultData.result
+  const recommendations = resultData.recommendations
+  const date = result.completedAt ? new Date(result.completedAt) : null
 
   return (
     <div className="p-6">
@@ -132,6 +108,5 @@ export default function Results() {
         )}
       </div>
     </div>
-  );
+  )
 }
-//end of code
