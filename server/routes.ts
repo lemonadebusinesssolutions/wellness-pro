@@ -1,7 +1,8 @@
 import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
-import { setupAuth } from "../auth";
-import { IStorage } from "../storage";
+import { setupAuth } from "./auth";
+import { IStorage } from "./storage";
+import { calculateScoreAndCategories } from "./utils/quiz-utils";
 
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
