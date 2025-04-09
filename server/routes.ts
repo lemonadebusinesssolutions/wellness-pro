@@ -18,16 +18,16 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
         sameSite: "lax",
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        maxAge: 1000 * 60 * 60 * 24 * 30,
       },
     })
   );
 
-  // 🔐 Auth setup
+  // 🔐 Auth routes
   await setupAuth(app, storage);
 
   // 📡 GET /api/assessments
-  app.get("/api/assessments", async (_req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/assessments", async (_req, res, next) => {
     try {
       const assessments = await storage.getAssessments();
       res.json(assessments);
@@ -38,13 +38,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
   });
 
   // 📡 GET /api/assessments/:type
-  app.get("/api/assessments/:type", async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/assessments/:type", async (req, res, next) => {
     try {
       const { type } = req.params;
       const assessment = await storage.getAssessmentByType(type);
-      if (!assessment) {
-        return res.status(404).json({ error: "Assessment not found" });
-      }
+      if (!assessment) return res.status(404).json({ error: "Assessment not found" });
       res.json(assessment);
     } catch (err) {
       console.error("❌ Error: /api/assessments/:type", err);
@@ -52,14 +50,27 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
+  // 📘 GET /api/questions/:type
+  app.get("/api/questions/:type", async (req, res, next) => {
+    try {
+      const type = req.params.type;
+      const questions = await storage.getQuestionsByAssessmentType(type);
+      if (!questions || questions.length === 0) {
+        return res.status(404).json({ error: "No questions found for this assessment type" });
+      }
+      res.json(questions);
+    } catch (err) {
+      console.error("❌ Error: /api/questions/:type", err);
+      next(err);
+    }
+  });
+
   // 📊 GET /api/result/:id
-  app.get("/api/result/:id", async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/result/:id", async (req, res, next) => {
     try {
       const id = parseInt(req.params.id, 10);
       const result = await storage.getResultById(id);
-      if (!result) {
-        return res.status(404).json({ error: "Result not found" });
-      }
+      if (!result) return res.status(404).json({ error: "Result not found" });
 
       // 🧠 Normalize categories
       if (typeof result.categories === "string") {
@@ -75,25 +86,21 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
         result.categories = [];
       }
 
-      const recommendations = await storage.getRecommendationsByAssessmentType(result.assessmentType);
-      res.json({ result, recommendations });
+      // 📈 Recommendations by score
+      const recommendations = await storage.getRecommendationsByAssessmentType(result.assessmentType, result.score);
+
+      res.json({
+        result: {
+          id: result.id,
+          assessmentType: result.assessmentType,
+          score: result.score,
+          categories: result.categories,
+          completedAt: result.completedAt,
+        },
+        recommendations,
+      });
     } catch (err) {
       console.error("❌ Error: /api/result/:id", err);
-      next(err);
-    }
-  });
-
-  // ❓ GET /api/questions/:type
-  app.get("/api/questions/:type", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const type = req.params.type;
-      const questions = await storage.getQuestionsByAssessmentType(type);
-      if (!questions || questions.length === 0) {
-        return res.status(404).json({ error: "No questions found for this assessment type" });
-      }
-      res.json(questions);
-    } catch (err) {
-      console.error("❌ Error: /api/questions/:type", err);
       next(err);
     }
   });
