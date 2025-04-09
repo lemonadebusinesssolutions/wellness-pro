@@ -1,9 +1,8 @@
-//start of code
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-import { registerRoutes } from "./routes/index"; // explicit path to updated file
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { DbStorage } from "./db-storage";
+import { DbStorage } from "./db-storage"; // ✅ Import actual storage
 
 const app = express();
 
@@ -53,10 +52,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const storage = new DbStorage();
-  await storage.initialize(); // Ensures migrations and seed data
+  const storage = new DbStorage(); // ✅ Create instance
+  await storage.initialize();      // ✅ Init database + seed if needed
 
-  await registerRoutes(app, storage); // now correctly passes storage
+  await registerRoutes(app, storage); // ✅ Pass storage into routes
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -74,4 +73,3 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 })();
-//end of code
