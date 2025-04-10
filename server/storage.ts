@@ -39,6 +39,10 @@ export interface IStorage {
   getRecommendationsByCategory(category: string): Promise<Recommendation[]>;
   getRecommendationsByCategoryAndScore(category: string, score: number): Promise<Recommendation[]>;
 
+  // Journal
+  createJournalEntry(userId: number, entry: string): Promise<void>;
+  getJournalEntries(userId: number): Promise<{ id: number; entry: string; createdAt: Date }[]>;
+
   // Setup
   initialize(): Promise<void>;
 }

@@ -29,7 +29,7 @@ export class DbStorage implements IStorage {
   async initialize(): Promise<void> {
     await migrate();
     await seedInitialData();
-    console.log("📦 Database initialized");
+    console.log("\ud83d\udce6 Database initialized");
   }
 
   // ───── USER ─────
@@ -162,7 +162,7 @@ export class DbStorage implements IStorage {
     return rows[0];
   }
 
-  async getRecommendationsByAssessmentType(type: string, score: number): Promise<Recommendation[]> {
+  async getRecommendationsByAssessmentType(type: string, score: number) {
     const { rows } = await this.pool.query(
       `SELECT * FROM recommendations
        WHERE assessment_type = $1 AND $2 BETWEEN min_score AND max_score
@@ -172,7 +172,7 @@ export class DbStorage implements IStorage {
     return rows;
   }
 
-  async getRecommendationsByCategory(category: string): Promise<Recommendation[]> {
+  async getRecommendationsByCategory(category: string) {
     const { rows } = await this.pool.query(
       `SELECT * FROM recommendations WHERE category = $1`,
       [category]
@@ -180,7 +180,7 @@ export class DbStorage implements IStorage {
     return rows;
   }
 
-  async getRecommendationsByCategoryAndScore(category: string, score: number): Promise<Recommendation[]> {
+  async getRecommendationsByCategoryAndScore(category: string, score: number) {
     const { rows } = await this.pool.query(
       `SELECT * FROM recommendations WHERE category = $1 AND $2 BETWEEN min_score AND max_score`,
       [category, score]
@@ -188,7 +188,7 @@ export class DbStorage implements IStorage {
     return rows;
   }
 
-  async createRecommendation(rec: InsertRecommendation): Promise<Recommendation> {
+  async createRecommendation(rec: InsertRecommendation) {
     const { rows } = await this.pool.query(
       `INSERT INTO recommendations (assessment_type, category, title, description, tips, min_score, max_score, priority)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
@@ -204,5 +204,20 @@ export class DbStorage implements IStorage {
       ]
     );
     return rows[0];
+  }
+
+  async createJournalEntry(userId: number, entry: string): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO journal (user_id, entry, created_at) VALUES ($1, $2, NOW())`,
+      [userId, entry]
+    );
+  }
+
+  async getJournalEntries(userId: number): Promise<{ id: number; entry: string; createdAt: Date }[]> {
+    const { rows } = await this.pool.query(
+      `SELECT id, entry, created_at as "createdAt" FROM journal WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
+    );
+    return rows;
   }
 }
