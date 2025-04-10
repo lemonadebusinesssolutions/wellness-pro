@@ -14,6 +14,7 @@ import ArticleView from "@/pages/ArticleView";
 import AuthPage from "@/pages/AuthPage";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import JournalPage from "@/components/dashboard/JournalPage";
 import { useEffect } from "react";
 import { getAnonymousUserId } from "./lib/utils";
 import { ThemeProvider } from "@/hooks/use-theme";
@@ -38,6 +39,7 @@ function Router() {
           <ProtectedRoute path="/quiz/:type" component={Quiz} />
           <ProtectedRoute path="/results/:type/:resultId" component={Results} />
           <ProtectedRoute path="/dashboard" component={Dashboard} />
+          <ProtectedRoute path="/dashboard/journal" component={JournalPage} />
           <ProtectedRoute path="/resources" component={Resources} />
           <ProtectedRoute path="/article/:id" component={ArticleView} />
           <Route component={NotFound} />

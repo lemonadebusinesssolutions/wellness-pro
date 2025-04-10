@@ -38,6 +38,7 @@ export default function Header() {
     { path: "/", label: "Home" },
     { path: "/assessments", label: "Assessments" },
     { path: "/dashboard", label: "Dashboard" },
+    { path: "/dashboard/journal", label: "Journal" },
     { path: "/resources", label: "Resources" },
     { path: "/about", label: "About" },
   ];
