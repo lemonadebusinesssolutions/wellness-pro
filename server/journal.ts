@@ -11,8 +11,8 @@ export function journalRouter(storage: IStorage) {
 
   // Middleware to ensure user is authenticated
   const requireAuth = (req: Request, res: Response, next: () => void) => {
-    if (!req.isAuthenticated?.() || !req.user) {
-      return res.status(401).json({ error: "Not authenticated" });
+    if (!req.isAuthenticated?.() || !req.user || typeof req.user.id !== "number") {
+      return res.status(401).json({ error: "Unauthorized: Missing or invalid user ID" });
     }
     next();
   };
@@ -24,27 +24,27 @@ export function journalRouter(storage: IStorage) {
       return res.status(400).json({ error: parsed.error.errors[0].message });
     }
 
-    const userId = req.user.id;
+    const userId = (req.user as Express.User).id;
     const { entry } = parsed.data;
 
     try {
       await storage.createJournalEntry(userId, entry);
-      res.status(201).json({ message: "Journal entry saved" });
+      res.status(201).json({ message: "Journal entry saved successfully" });
     } catch (err) {
-      console.error("Error saving journal entry:", err);
+      console.error("❌ Error saving journal entry:", err);
       res.status(500).json({ error: "Failed to save journal entry" });
     }
   });
 
   // Get journal entries
   router.get("/", requireAuth, async (req: Request, res: Response) => {
-    const userId = req.user.id;
+    const userId = (req.user as Express.User).id;
 
     try {
       const entries = await storage.getJournalEntries(userId);
       res.json(entries);
     } catch (err) {
-      console.error("Error fetching journal entries:", err);
+      console.error("❌ Error fetching journal entries:", err);
       res.status(500).json({ error: "Failed to fetch journal entries" });
     }
   });
