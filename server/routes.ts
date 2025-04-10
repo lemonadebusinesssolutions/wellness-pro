@@ -3,6 +3,7 @@ import session from "express-session";
 import { setupAuth } from "./auth";
 import { IStorage } from "./storage";
 import { calculateScoreAndCategories } from "./utils/quiz-utils";
+import { journalRouter } from "./journal"; // ✅ ADDED
 
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
@@ -25,6 +26,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
 
   // 🔐 Authentication setup
   await setupAuth(app, storage);
+
+  // 📝 Journal routes
+  app.use("/api/journal", journalRouter(storage)); // ✅ ADDED
 
   // 📡 All assessments
   app.get("/api/assessments", async (_req, res, next) => {
