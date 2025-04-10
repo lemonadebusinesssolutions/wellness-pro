@@ -7,6 +7,7 @@ import { calculateScoreAndCategories } from "./utils/quiz-utils";
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
 
+  // 🔐 Session middleware
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "mysecret",
@@ -22,8 +23,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     })
   );
 
+  // 🔐 Authentication setup
   await setupAuth(app, storage);
 
+  // 📡 All assessments
   app.get("/api/assessments", async (_req, res, next) => {
     try {
       const assessments = await storage.getAssessments();
@@ -33,6 +36,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
+  // 📡 Single assessment
   app.get("/api/assessments/:type", async (req, res, next) => {
     try {
       const { type } = req.params;
@@ -46,6 +50,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
+  // ❓ Questions by type
   app.get("/api/questions/:type", async (req, res, next) => {
     try {
       const questions = await storage.getQuestionsByAssessmentType(req.params.type);
@@ -58,42 +63,42 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
+  // 📊 Result by ID
   app.get("/api/result/:id", async (req, res, next) => {
     try {
       const id = parseInt(req.params.id, 10);
-      const dbResult = await storage.getResultById(id);
+      const raw = await storage.getResultById(id);
 
-      if (!dbResult) {
+      if (!raw) {
         return res.status(404).json({ error: "Result not found" });
       }
 
-      // Normalize categories
       let categoryList: string[] = [];
-      if (typeof dbResult.categories === "string") {
+      if (typeof raw.categories === "string") {
         try {
-          const parsed = JSON.parse(dbResult.categories);
+          const parsed = JSON.parse(raw.categories);
           categoryList = Object.keys(parsed);
         } catch {
           categoryList = [];
         }
-      } else if (typeof dbResult.categories === "object" && dbResult.categories !== null) {
-        categoryList = Object.keys(dbResult.categories);
+      } else if (typeof raw.categories === "object" && raw.categories !== null) {
+        categoryList = Object.keys(raw.categories);
       }
 
       const recommendations = await storage.getRecommendationsByAssessmentType(
-        dbResult.assessmentType,
-        dbResult.score
+        raw.assessment_type,
+        raw.score
       );
 
       res.json({
         result: {
-          id: dbResult.id,
-          userId: dbResult.userId,
-          assessmentType: dbResult.assessmentType,
-          score: dbResult.score,
-          answers: dbResult.answers,
+          id: raw.id,
+          userId: raw.user_id,
+          assessmentType: raw.assessment_type,
+          score: raw.score,
+          answers: raw.answers,
           categories: categoryList,
-          completedAt: dbResult.completedAt,
+          completedAt: raw.completed_at,
         },
         recommendations,
       });
@@ -102,6 +107,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<E
     }
   });
 
+  // 📝 Submit Quiz
   app.post("/api/submit-quiz", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { assessmentType, answers, userId } = req.body;
