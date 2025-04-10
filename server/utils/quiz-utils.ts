@@ -8,7 +8,9 @@ export function calculateScoreAndCategories(questions: Question[], answers: numb
     const answer = answers[index];
     total += answer;
 
-    const cat = question.category;
+    // ✅ Normalize category: lowercase, trim, strip trailing digits (e.g. "general33" → "general")
+    const cat = question.category.trim().toLowerCase().replace(/\d+$/, '');
+
     if (!categoryMap[cat]) {
       categoryMap[cat] = [];
     }
