@@ -1,8 +1,9 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -11,21 +12,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { UserIcon } from "lucide-react";
 
 export default function Header() {
   const [location, setLocation] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Handle logout
   const handleLogout = () => {
     logoutMutation.mutate();
   };
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (!user) return "?";
-    
     if (user.displayName) {
       const nameParts = user.displayName.split(" ");
       if (nameParts.length >= 2) {
@@ -33,9 +31,16 @@ export default function Header() {
       }
       return user.displayName[0].toUpperCase();
     }
-    
     return user.username[0].toUpperCase();
   };
+
+  const navItems = [
+    { path: "/", label: "Home" },
+    { path: "/assessments", label: "Assessments" },
+    { path: "/dashboard", label: "Dashboard" },
+    { path: "/resources", label: "Resources" },
+    { path: "/about", label: "About" },
+  ];
 
   return (
     <header className="bg-background border-b border-border shadow-sm dark:bg-slate-800 dark:border-slate-700">
@@ -45,49 +50,27 @@ export default function Header() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
           </svg>
           <Link href="/">
-            <span className="ml-2 text-xl font-semibold text-foreground dark:text-white cursor-pointer">Wellbeing Compass</span>
+            <span className="ml-2 text-xl font-semibold text-foreground dark:text-white cursor-pointer">
+              Wellbeing Compass
+            </span>
           </Link>
         </div>
+
+        {/* Desktop Nav */}
         <nav className="hidden md:flex space-x-8">
-          <Link href="/">
-            <span className={location === "/" 
-              ? "text-primary font-medium cursor-pointer dark:text-cyan-400" 
-              : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
-              Home
-            </span>
-          </Link>
-          <Link href="/assessments">
-            <span className={location === "/assessments" 
-              ? "text-primary font-medium cursor-pointer dark:text-cyan-400" 
-              : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
-              Assessments
-            </span>
-          </Link>
-          <Link href="/dashboard">
-            <span className={location === "/dashboard" 
-              ? "text-primary font-medium cursor-pointer dark:text-cyan-400" 
-              : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
-              Dashboard
-            </span>
-          </Link>
-          <Link href="/resources">
-            <span className={location === "/resources" 
-              ? "text-primary font-medium cursor-pointer dark:text-cyan-400" 
-              : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
-              Resources
-            </span>
-          </Link>
-          <Link href="/about">
-            <span className={location === "/about" 
-              ? "text-primary font-medium cursor-pointer dark:text-cyan-400" 
-              : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
-              About
-            </span>
-          </Link>
+          {navItems.map(({ path, label }) => (
+            <Link key={path} href={path}>
+              <span className={location === path
+                ? "text-primary font-medium cursor-pointer dark:text-cyan-400"
+                : "text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white"}>
+                {label}
+              </span>
+            </Link>
+          ))}
         </nav>
+
         <div className="flex items-center space-x-4">
           <ThemeToggle />
-          
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -114,8 +97,8 @@ export default function Header() {
                   </DropdownMenuItem>
                 </Link>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  className="cursor-pointer text-red-500 focus:text-red-500" 
+                <DropdownMenuItem
+                  className="cursor-pointer text-red-500 focus:text-red-500"
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
                 >
@@ -128,14 +111,32 @@ export default function Header() {
               Sign In
             </Button>
           )}
-          
-          <button className="md:hidden ml-2 text-foreground dark:text-white">
+
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden ml-2 text-foreground dark:text-white"
+            aria-label="Toggle Menu"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
       </div>
+
+      {/* Mobile Nav Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden px-4 pb-4 flex flex-col space-y-4 bg-background border-t border-border">
+          {navItems.map(({ path, label }) => (
+            <Link key={path} href={path}>
+              <span className="text-muted-foreground hover:text-foreground font-medium cursor-pointer dark:text-gray-300 dark:hover:text-white">
+                {label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
     </header>
   );
 }
