@@ -17,7 +17,7 @@ export function journalRouter(storage: IStorage) {
     next();
   };
 
-  // Create journal entry
+  // Create journal entry.
   router.post("/", requireAuth, async (req: Request, res: Response) => {
     const parsed = journalSchema.safeParse(req.body);
     if (!parsed.success) {
