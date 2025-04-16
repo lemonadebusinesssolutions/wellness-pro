@@ -37,7 +37,7 @@ export default function Header() {
   const navItems = [
     { path: "/", label: "Home" },
     { path: "/assessments", label: "Assessments" },
-    { path: "/dashboard", label: "Dashboard" },
+    { path: "/dashboard", label: "Dashboardd" },
     { path: "/dashboard/journal", label: "Journal" },
     { path: "/resources", label: "Resources" },
     { path: "/about", label: "About" },
