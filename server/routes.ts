@@ -8,7 +8,7 @@ import { journalRouter } from "./journal"; // ✅ ADDED
 export async function registerRoutes(app: Express, storage: IStorage): Promise<Express> {
   console.log("✅ Routes: Initialized");
 
-  // 🔐 Session middleware.
+  // 🔐 Session middleware
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "mysecret",
