@@ -17,7 +17,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600 dark:text-gray-300">
-              Evaluate multiple dimensions of your wellbeing and receive personalized recommendations to improve your overall quality of life.
+              Evaluate multiple dimensions of your wellbeing and receive personalized recommendations to improve your overall quality of life..
             </p>
             <div className="mt-10 flex justify-center gap-4">
               <Link href="/assessments">
